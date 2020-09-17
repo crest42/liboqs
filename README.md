@@ -61,6 +61,8 @@ Note that algorithms marked with a dagger (†) have large stack usage and may c
 
 ### Limitations and Security
 
+**THIS FORK IS AT AN EXPERIMENTAL STAGE, AND WE DO NOT RECOMMENDED ITS USE IN A PRODUCTION ENVIRONMENT OR TO PROTECT ANY SENSITIVE DATA.**
+
 As research advances, the supported algorithms may see rapid changes in their security, and may even prove insecure against both classical and quantum computers.
 
 liboqs does not intend to "pick winners": algorithm support is informed by the NIST [Post-Quantum Cryptography Standardization](https://csrc.nist.gov/Projects/Post-Quantum-Cryptography/Post-Quantum-Cryptography-Standardization) project. We strongly recommend that applications and protocols rely on the outcomes of ths effort when deploying post-quantum cryptography.

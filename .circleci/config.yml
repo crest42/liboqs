@@ -3,6 +3,11 @@ version: 2.1
 orbs:
   win: circleci/windows@2.2.0
 
+exclude_master: &exclude_master
+  filters:
+    branches:
+      ignore: master
+
 # CircleCI doesn't handle large file sets properly for local builds
 # https://github.com/CircleCI-Public/circleci-cli/issues/281#issuecomment-472808051
 localCheckout: &localCheckout
@@ -20,14 +25,14 @@ localCheckout: &localCheckout
     - checkout # change this from "checkout" to "*localCheckout" when running CircleCI locally
     - run:
         name: Configure
-        command: scripts/git_no_checkin_in_last_day.sh || (mkdir build && cd build && source ~/.bashrc && cmake -GNinja ${CONFIGURE_ARGS} .. && cmake -LA ..)
+        command: mkdir build && cd build && source ~/.bashrc && cmake -GNinja ${CONFIGURE_ARGS} .. && cmake -LA ..
     - run:
         name: Build
-        command: ../scripts/git_no_checkin_in_last_day.sh || ninja
+        command: ninja
         working_directory: build
     - run:
         name: Run tests
-        command: ../scripts/git_no_checkin_in_last_day.sh || ninja run_tests
+        command: ninja run_tests
         working_directory: build
     - store_test_results: # Note that this command will fail when running CircleCI locally, that is expected behaviour
         path: build/test-results
@@ -45,7 +50,6 @@ localCheckout: &localCheckout
     - run:
         name: Run the tests in a container
         command: |
-          scripts/git_no_checkin_in_last_day.sh ||
           docker run -e SKIP_TESTS=style --rm -v `pwd`:`pwd` -w `pwd` openquantumsafe/ci-debian-buster-${ARCH}:latest /bin/bash -c "
           uname -a &&
           file /bin/ls &&
@@ -60,36 +64,6 @@ localCheckout: &localCheckout
         path: build/test-results
     - store_artifacts:
         path: build/test-results
-
-.winjob: &winjob
-    executor:
-      name: win/default
-    steps:
-        - checkout
-        - run:
-           name: Install ninja
-           command: $ProgressPreference="SilentlyContinue" ; Invoke-RestMethod -Uri https://github.com/ninja-build/ninja/releases/download/v1.10.0/ninja-win.zip -Method Get -OutFile ninja.zip; Expand-Archive ninja.zip
-           shell: powershell.exe
-        - run:
-            name: Install dependencies
-            command: |
-              scripts/git_no_checkin_in_last_day.sh || (
-              pip install pytest pytest-xdist
-              )
-            shell: bash.exe
-        - run:
-            name: Configure & Build
-            command: PATH=C:\Users\circleci\project\ninja;%PATH% & call C:\PROGRA~2\MICROS~2\2019\Community\VC\Auxiliary\Build\vcvars64.bat & mkdir build & cd build & cmake -GNinja ${CONFIGURE_ARGS} .. & cmake -LA .. & ninja
-            shell: cmd.exe
-        - run:
-            name: Run tests
-            command: PATH=C:\Users\circleci\project\ninja;%PATH% & ninja run_tests
-            working_directory: build
-            shell: cmd.exe
-        - store_test_results: # Note that this command will fail when running CircleCI locally, that is expected behaviour
-            path: build/test-results
-        - store_artifacts:
-            path: build/test-results
 
 .macjob: &macjob
     macos:
@@ -107,17 +81,17 @@ localCheckout: &localCheckout
               )
         - run:
             name: Configure
-            command: scripts/git_no_checkin_in_last_day.sh || (mkdir build && cd build && cmake -GNinja ${CONFIGURE_ARGS} .. && cmake -LA ..)
+            command: mkdir build && cd build && cmake -GNinja ${CONFIGURE_ARGS} .. && cmake -LA ..
         - run:
             name: Build
-            command: ../scripts/git_no_checkin_in_last_day.sh || ninja
+            command: ninja
             working_directory: build
         - run:
             name: System information
-            command: scripts/git_no_checkin_in_last_day.sh || (sysctl -a | grep machdep.cpu)
+            command: sysctl -a | grep machdep.cpu
         - run:
             name: Run tests
-            command: ../scripts/git_no_checkin_in_last_day.sh || ninja run_tests
+            command: ninja run_tests
             working_directory: build
         - store_test_results: # Note that this command will fail when running CircleCI locally, that is expected behaviour
             path: build/test-results
@@ -219,60 +193,59 @@ jobs:
         CONFIGURE_ARGS: -DOQS_USE_OPENSSL=ON -DBUILD_SHARED_LIBS=ON
         RUN_TESTS_PARALLEL: FALSE
         SKIP_TESTS: style,doxygen
-  win-static:
-    <<: *winjob
-    environment:
-        CONFIGURE_ARGS: -DOQS_USE_OPENSSL=OFF
-        SKIP_TESTS: style
-  win-shared:
-    <<: *winjob
-    environment:
-        CONFIGURE_ARGS: -DOQS_USE_OPENSSL=OFF -DBUILD_SHARED_LIBS=ON
-        SKIP_TESTS: style
+  trigger-downstream-ci:
+    docker:
+      - image: cimg/base:2020.01
+    steps:
+      - run:
+          name: Trigger OQS-OpenSSL CI
+          command: |
+            curl -u ${BUILD_TRIGGER_TOKEN}: -X POST --header "Content-Type: application/json" -d '{"branch": "OQS-OpenSSL_1_1_1-stable"}' https://circleci.com/api/v2/project/gh/open-quantum-safe/openssl/pipeline
+      - run:
+          name: Trigger OQS-BoringSSL CI
+          command: |
+            curl -u ${BUILD_TRIGGER_TOKEN}: -X POST --header "Content-Type: application/json" -d '{"branch": "master"}' https://circleci.com/api/v2/project/gh/open-quantum-safe/boringssl/pipeline
+      - run:
+          name: Trigger OQS-OpenSSH CI
+          command: |
+            curl -u ${BUILD_TRIGGER_TOKEN}: -X POST --header "Content-Type: application/json" -d '{"branch": "OQS-master"}' https://circleci.com/api/v2/project/gh/open-quantum-safe/openssh/pipeline
 
 workflows:
   version: 2
   build:
     jobs:
-      - win-static:
+      - centos-7-amd64:
+          <<: *exclude_master
+      - centos-8-amd64:
+          <<: *exclude_master
+      - debian-buster-amd64:
+          <<: *exclude_master
+      - debian-buster-arm64:
+          <<: *exclude_master
+      - debian-buster-armhf:
+          <<: *exclude_master
+      - debian-buster-armel:
+          <<: *exclude_master
+      - ubuntu-bionic-x86_64-gcc7-noopenssl:
+          <<: *exclude_master
+      - ubuntu-bionic-x86_64-gcc7-shared:
+          <<: *exclude_master
+      - ubuntu-bionic-x86_64-gcc8:
+          <<: *exclude_master
+      - ubuntu-bionic-x86_64-clang9:
+          <<: *exclude_master
+      - alpine-amd64-static:
+          <<: *exclude_master
+      - alpine-amd64-shared:
+          <<: *exclude_master
+      - macOS-static-noopenssl:
+          <<: *exclude_master
+      - macOS-shared-openssl:
+          <<: *exclude_master
+      - ubuntu-bionic-x86_64-asan:
+          <<: *exclude_master
+      - trigger-downstream-ci:
+          context: openquantumsafe
           filters:
             branches:
-              only:
-                - /win-.*/
-      - win-shared:
-          filters:
-            branches:
-              only:
-                - /win-.*/
-      - alpine-amd64-static
-      - alpine-amd64-shared
-      - centos-7-amd64
-      - centos-8-amd64
-      - debian-buster-amd64
-      - macOS-shared-openssl
-      - ubuntu-bionic-x86_64-gcc8
-      - ubuntu-bionic-x86_64-clang9
-      - ubuntu-bionic-x86_64-gcc7-shared
-  nightly:
-    triggers:
-      - schedule:
-          cron: "0 0 * * *"
-          filters:
-            branches:
-              only:
-                - master
-    jobs:
-      - centos-7-amd64
-      - centos-8-amd64
-      - debian-buster-amd64
-      - debian-buster-arm64
-      - debian-buster-armhf
-      - debian-buster-armel
-      - ubuntu-bionic-x86_64-gcc7-noopenssl
-      - ubuntu-bionic-x86_64-gcc7-shared
-      - ubuntu-bionic-x86_64-gcc8
-      - ubuntu-bionic-x86_64-clang9
-      - alpine-amd64-static
-      - alpine-amd64-shared
-      - macOS-static-noopenssl
-      - ubuntu-bionic-x86_64-asan
+              only: master
