@@ -20,14 +20,6 @@ def test_datasheet_sig(sig_name):
         ['grep', '-r', sig_name, 'docs/algorithms']
     )
 
-@helpers.filtered_test
-@pytest.mark.skipif(sys.platform.startswith("win"), reason="Not needed on Windows")
-def test_doxygen(build_tool):
-    helpers.run_subprocess(
-        [build_tool, 'gen_docs'],
-        working_dir="build"
-    )
-
 if __name__ == "__main__":
     import sys
     pytest.main(sys.argv)
