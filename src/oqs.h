@@ -19,6 +19,7 @@
 #include <oqs/sha3.h>
 #include <oqs/rand.h>
 #include <oqs/kem.h>
+#include <oqs/keys.h>
 #include <oqs/sig.h>
 
 #endif // OQS_H

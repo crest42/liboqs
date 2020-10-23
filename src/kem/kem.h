@@ -278,6 +278,7 @@ OQS_API OQS_KEM *OQS_KEM_new(const char *method_name);
  * @return OQS_SUCCESS or OQS_ERROR
  */
 OQS_API OQS_STATUS OQS_KEM_keypair(const OQS_KEM *kem, uint8_t *public_key, uint8_t *secret_key);
+OQS_API OQS_STATUS OQS_KEM_keypair_fresh(const OQS_KEM *kem, uint8_t *public_key, uint8_t *secret_key);
 
 /**
  * Encapsulation algorithm.

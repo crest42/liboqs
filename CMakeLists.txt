@@ -56,6 +56,7 @@ set(PUBLIC_HEADERS ${PROJECT_SOURCE_DIR}/src/oqs.h
                    ${PROJECT_SOURCE_DIR}/src/common/sha2/sha2.h
                    ${PROJECT_SOURCE_DIR}/src/common/sha3/sha3.h
                    ${PROJECT_SOURCE_DIR}/src/kem/kem.h
+                   ${PROJECT_SOURCE_DIR}/src/kem/keys.h
                    ${PROJECT_SOURCE_DIR}/src/sig/sig.h)
 
 if(OQS_ENABLE_KEM_BIKE)

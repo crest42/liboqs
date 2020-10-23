@@ -9,6 +9,7 @@
 #include <strings.h>
 #endif
 
+#include <stdio.h>
 #include <oqs/oqs.h>
 
 OQS_API const char *OQS_KEM_alg_identifier(size_t i) {
@@ -770,6 +771,27 @@ OQS_API OQS_KEM *OQS_KEM_new(const char *method_name) {
 	} else {
 		return NULL;
 	}
+}
+
+OQS_API OQS_STATUS OQS_KEM_keypair_fresh(const OQS_KEM *kem, uint8_t *public_key, uint8_t *secret_key) {
+	
+       if (kem == NULL) {
+               return OQS_ERROR;
+       } else {
+	       return OQS_KEM_get_static_key(kem, public_key, secret_key);
+               OQS_STATUS state = kem->keypair(public_key, secret_key);
+               fprintf(stderr, "static uint8_t kem_%s_pub = {", kem->method_name);
+               for (size_t i = 0; i<kem->length_public_key;i++) {
+                       fprintf(stderr, "0x%02x, ", public_key[i]);
+               }
+               fprintf(stderr, "}\n");
+               fprintf(stderr, "static uint8_t kem_%s_priv = {", kem->method_name);
+               for (size_t i = 0; i<kem->length_secret_key;i++) {
+                       fprintf(stderr, "0x%02x, ", secret_key[i]);
+               }
+               fprintf(stderr, "}\n");
+               return state;
+       }
 }
 
 OQS_API OQS_STATUS OQS_KEM_keypair(const OQS_KEM *kem, uint8_t *public_key, uint8_t *secret_key) {

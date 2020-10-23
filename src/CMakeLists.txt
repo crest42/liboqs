@@ -58,6 +58,7 @@ endif()
 ##### OQS_COPY_FROM_PQCLEAN_FRAGMENT_ADD_ALG_OBJECTS_END
 
 add_library(oqs kem/kem.c
+                kem/keys.c
                 ${KEM_OBJS}
                 sig/sig.c
                 ${SIG_OBJS}
